@@ -103,3 +103,7 @@ async def group_and_superuser(event: Event) -> bool:
 GROUP_SUPERUSER = Permission(group_and_superuser)
 GROUP = Permission(is_group)
 PRIVATE = Permission(is_private)
+
+@bot.on_friend_request()
+async def _(session):
+    await session.approve()
