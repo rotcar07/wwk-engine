@@ -68,20 +68,55 @@ ROLE_DICT = {
 WOLF = ['Wo', 'WW', 'BW', 'ES']
 NOT_OP = ['Id', 'Hu', 'Vi', 'Kn']
 
-async def get_by_qid(qid: int):
+def get_by_qid(qid: int) -> int:
     for i in player_list:
         if i.qid == qid:
             return i.id
     return 0
 
-async def get_by_role(role: str):
+def get_by_role(role: str) -> int:
     for i in player_list:
         if i.role == role:
             return i.id
     return 0
 
+def build_observe_msg() -> str:
+    msg = ''
+    for pl in player_list:
+        x = ''
+        if pl.dead:
+            x = 'DEAD'
+        else:
+            x = 'ALIVE'
+        msg += f'{pl.id} {x} {ROLE_DICT[pl.role]}\n'
+    return msg
+    
+def build_player_msg() -> str:
+    msg = ''
+    for pl in player_list:
+        x = ''
+        if pl.dead and (not pl.id in die_list or (status != Status.EVE and status != Status.DAY_PRE and status != Status.VOT_END)):
+            x = 'DEAD'
+        else:
+            x = 'ALIVE'
+        msg += f'{pl.id} {x}'
+        if show_id and x == 'DEAD':
+            msg += f' {ROLE_DICT[pl.role]}\n'
+        else:
+            msg += '\n'
+    return msg
+
+def find_next_player(cur_id: int) -> int:
+    n = len(player_list)
+    delta = -1 if is_rev else 1
+
+    while True:
+        cur_id = (cur_id - 1 + delta) % n + 1
+        if not player_list[cur_id - 1].dead:
+            return cur_id
+
 async def ban(qid: int, time = 3600):
-    x = await get_by_qid(qid)
+    x = get_by_qid(qid)
     if x == -1 or not time or not is_idiot_dead or player_list[x-1].role != 'Id':
         try:
             await bot.set_group_ban(user_id = qid, duration = time)
@@ -122,55 +157,6 @@ async def _(session):
                     player_list.remove(pl)
                     break
     await session.send("踢人已完成")
-
-def build_observe_msg():
-    msg = ''
-    for pl in player_list:
-        x = ''
-        if pl.dead:
-            x = 'DEAD'
-        else:
-            x = 'ALIVE'
-        msg += f'{pl.id} {x} {ROLE_DICT[pl.role]}\n'
-    return msg
-    
-def build_player_msg():
-    msg = ''
-    for pl in player_list:
-        x = ''
-        if pl.dead and (not pl.id in die_list or (status != Status.EVE and status != Status.DAY_PRE and status != Status.VOT_END)):
-            x = 'DEAD'
-        else:
-            x = 'ALIVE'
-        msg += f'{pl.id} {x}'
-        if show_id and x == 'DEAD':
-            msg += f' {ROLE_DICT[pl.role]}\n'
-        else:
-            msg += '\n'
-    return msg
-
-def find_next_player(cur_id:int):
-    if is_rev == 1:
-        if cur_id == 1:
-            cur_id = len(player_list)
-        else:
-            cur_id -= 1
-        while player_list[cur_id-1].dead:
-            if cur_id == 1:
-                cur_id = len(player_list)
-            else:
-                cur_id -= 1
-    else:
-        if cur_id == len(player_list):
-            cur_id = 1
-        else:
-            cur_id += 1
-        while player_list[cur_id-1].dead:
-            if cur_id == len(player_list):
-                cur_id = 1
-            else:
-                cur_id += 1
-    return cur_id
 
 @bot.on_command("wshow", aliases = '看看你的', permission = GROUP | PRIVATE)
 async def _(session):
@@ -475,14 +461,14 @@ async def day_move():
                 game_log.append(f"摄梦人连续两晚摄恶灵 {x}，恶灵免疫")
             else:
                 ESOp = 1
-                dcid = await get_by_role('DC')
+                dcid = get_by_role('DC')
                 game_log.append(f"摄梦人连续两晚摄恶灵 {x}，恶灵反伤摄梦人 {dcid}")
                 await die(dcid, queue = True)
         else:
             game_log.append(f"摄梦人连续两晚摄梦 {x}，{x} 死亡")
             await die(x,can_op = False, queue = True)
     if PredOp > 0:
-        PredId = await get_by_role('Pr')
+        PredId = get_by_role('Pr')
         if player_list[PredOp-1].role in WOLF:
             await bot.send_private_msg(user_id = player_list[PredId-1].qid, message = f'{PredOp} 号身份为坏')
             game_log.append(f"{PredOp} 被查杀")
@@ -504,7 +490,7 @@ async def day_move():
                 game_log.append(f"恶灵 {-WitchOp} 免疫伤害")
             else:
                 ESOp = 1
-                WitId = await get_by_role('Wi')
+                WitId = get_by_role('Wi')
                 if DCOp == WitId:
                     game_log.append(f"女巫 {WitId} 被恶灵反伤，由于摄梦人，反伤失效")
                 else:
@@ -516,7 +502,7 @@ async def day_move():
         PoitPot = 1
     if status != Status.DAY_PRE:
         return
-    dcid = await get_by_role('DC')
+    dcid = get_by_role('DC')
     if dcid != -1:
         if player_list[dcid-1].dead and DCOp and not player_list[DCOp-1].dead:
             if player_list[DCOp-1].role == 'ES':
@@ -645,14 +631,14 @@ async def _(session):
     if status != Status.EVE:
         await session.send("现在不是晚上")
         return
-    id = await get_by_qid(session.event.user_id)
+    id = get_by_qid(session.event.user_id)
     if id == 0 or player_list[id-1].is_op or player_list[id-1].dead or player_list[id-1].role in NOT_OP or (id in wolf_team and id != wolf_team[0]):
         await session.send("您不可操作")
         return
     player_list[id-1].is_op = True
     await session.send("操作确认成功")
     if id == wolf_team[0]:
-        id = await get_by_role('Wi')
+        id = get_by_role('Wi')
         for i in wolf_team:
             if not i == wolf_team[0]:
                 await bot.send_private_msg(user_id = player_list[i-1].qid,message = f"操作已确认")
@@ -681,7 +667,7 @@ async def _(session):
         await session.send("操作不合法")
         return
     to = int(x)
-    z = await get_by_qid(session.event.user_id)
+    z = get_by_qid(session.event.user_id)
     if z == -1:
         await session.send("操作不合法")
         return
@@ -697,7 +683,7 @@ async def _(session):
     if status != Status.EVE:
         await session.send("现在不是晚上")
         return
-    z = await get_by_qid(session.event.user_id)
+    z = get_by_qid(session.event.user_id)
     if z == -1 or player_list[z-1].role != 'Wi' or player_list[z-1].is_op or player_list[z-1].dead or SavePot == 1 or WolfOp == 0:
         await session.send("操作不合法")
         return
@@ -717,7 +703,7 @@ async def _(session):
         await session.send("操作不合法")
         return
     to = int(x)
-    z = await get_by_qid(session.event.user_id)
+    z = get_by_qid(session.event.user_id)
     if z == -1 or z != wolf_team[0] or player_list[z-1].is_op or player_list[z-1].dead or player_list[to-1].dead:
         await session.send("操作不合法")
         return
@@ -739,7 +725,7 @@ async def _(session):
         await session.send("操作不合法")
         return
     to = int(x)
-    z = await get_by_qid(session.event.user_id)
+    z = get_by_qid(session.event.user_id)
     if z == -1 or player_list[z-1].role != 'Wi' or player_list[z-1].is_op or player_list[z-1].dead or PoitPot == 1 or player_list[to-1].dead:
         await session.send("操作不合法")
         return
@@ -757,7 +743,7 @@ async def _(session):
         await session.send("操作不合法")
         return
     to = int(x)
-    z = await get_by_qid(session.event.user_id)
+    z = get_by_qid(session.event.user_id)
     if z == -1:
         await session.send("操作不合法")
         return
@@ -778,7 +764,7 @@ async def _(session):
         await session.send("操作不合法")
         return
     to = int(x)
-    z = await get_by_qid(session.event.user_id)
+    z = get_by_qid(session.event.user_id)
     if z == -1:
         await session.send("操作不合法")
         return
@@ -794,7 +780,7 @@ async def _(session):
     if status != Status.DAY_PRE and status != Status.VOT_END and status != Status.CUT:
         await session.send("现在不是枪的时机")
         return
-    q = await get_by_qid(session.event.user_id)
+    q = get_by_qid(session.event.user_id)
     if not q in guned_list:
         await session.send("您不可枪人")
         return
@@ -836,7 +822,7 @@ async def _(session):
     global die_list, pk_list, cur_id
     if session.event.group_id != bot.group_id:
         return
-    x = await get_by_qid(session.event.user_id)
+    x = get_by_qid(session.event.user_id)
     if x == -1:
         return
     if status == Status.DAY_LW:
@@ -916,7 +902,7 @@ async def day_vote():
 @bot.on_command('wcut', aliases = ['爆','自爆'],permission = PRIVATE)
 async def _(session):
     global player_list, status, cur_id, KnOp
-    id = await get_by_qid(session.event.user_id)
+    id = get_by_qid(session.event.user_id)
     if id == -1:
         return
     if (not id in wolf_team and player_list[id-1].role != 'Kn') or player_list[id-1].dead:
@@ -1035,7 +1021,7 @@ async def _(session):
 @bot.on_command('wvote', aliases = ['投','票','投票'],permission = PRIVATE)
 async def _(session):
     global vote_for, vote_list, can_vote_cnt
-    id = await get_by_qid(session.event.user_id)
+    id = get_by_qid(session.event.user_id)
     if status != Status.DAY_VOT and status != Status.DAY_VOT_UP:
         await session.send('还未到投票阶段')
         return
