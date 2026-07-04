@@ -60,7 +60,7 @@ class NoneBotPlatform:
     def on_command(
         self,
         name: str,
-        aliases: Collection[str] | None = None, # pyright: ignore[reportGeneralTypeIssues]
+        aliases = None,
         permission = None
     ):
         def decorator(func):

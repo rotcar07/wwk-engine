@@ -68,19 +68,19 @@ ROLE_DICT = {
 WOLF = ['Wo', 'WW', 'BW', 'ES']
 NOT_OP = ['Id', 'Hu', 'Vi', 'Kn']
 
-async def get_by_qid(qid:int):
+async def get_by_qid(qid: int):
     for i in player_list:
         if i.qid == qid:
             return i.id
-    return -1
+    return 0
 
-async def get_by_role(role:str):
+async def get_by_role(role: str):
     for i in player_list:
         if i.role == role:
             return i.id
-    return -1
+    return 0
 
-async def ban(qid:int, time = 3600):
+async def ban(qid: int, time = 3600):
     x = await get_by_qid(qid)
     if x == -1 or not time or not is_idiot_dead or player_list[x-1].role != 'Id':
         try:
@@ -127,7 +127,7 @@ def build_observe_msg():
     msg = ''
     for pl in player_list:
         x = ''
-        if pl.dead and not pl.id in die_list:
+        if pl.dead:
             x = 'DEAD'
         else:
             x = 'ALIVE'
@@ -235,9 +235,14 @@ async def _(session):
     game_log.__init__(msg)
     await session.send("wset 成功\n" + msg)
 
-async def reset():
+async def game_over():
     global player_list, status
     status = Status.END
+    await bot.send_group_msg(message = build_observe_msg())
+    await bot.send_group_msg(message = "游戏结束！")
+    game_log.append(build_observe_msg())
+    game_log.append("游戏结束！")
+    await game_log.replay()
     for pl in player_list:
         await bot.set_group_card(user_id = pl.qid, card = pl.ori_id)
     ls = await bot.get_group_member_list()
@@ -245,14 +250,14 @@ async def reset():
         if i['user_id'] == bot.bot_qid:
             continue
         await ban(qid = i['user_id'], time = 0)
-    game_log.__init__()
     player_list.clear()
+    role_list.clear()
     status = Status.PRE     
 
 @bot.on_command("wstop", aliases = '停止',permission = SUPERUSER)
 async def _(session):
     await bot.send_group_msg("游戏已终止！")
-    await reset()
+    await game_over()
 
 @bot.on_command("wnotice",permission = SUPERUSER)
 async def _(session):
@@ -323,13 +328,13 @@ async def _(session):
 
 async def good_win():
     await bot.send_group_msg(message = '好人胜利！')
-    await bot.send_group_msg(message = build_observe_msg())
-    await reset()
+    game_log.append("狼人胜利！")
+    await game_over()
 
 async def wolf_win():
     await bot.send_group_msg(message = '狼人胜利！')
-    await bot.send_group_msg(message = build_observe_msg())
-    await reset()
+    game_log.append("狼人胜利！")
+    await game_over()
 
 async def night_move():
     global status, player_list, WolfOp, WitchOp, GuardOp, lstGO, PredOp, day_cnt, game_log, bear_roar, lstDC, DCOp
