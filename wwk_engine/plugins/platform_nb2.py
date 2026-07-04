@@ -91,7 +91,7 @@ class NoneBotPlatform:
         return decorator
 
 config = nonebot.get_driver().config
-platform = NoneBotPlatform(group_id=config.groupid, bot_qid=config.botqid)
+bot = NoneBotPlatform(group_id=config.groupid, bot_qid=config.botqid)
 
 async def is_group(event: Event) -> bool:
     return isinstance(event, GroupMessageEvent) and event.group_id == platform.group_id

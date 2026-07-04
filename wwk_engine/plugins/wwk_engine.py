@@ -5,7 +5,7 @@ import numpy
 from collections import namedtuple
 from dataclasses import dataclass
 from collections.abc import Collection
-from .platform_nb2 import platform, GROUP, PRIVATE, GROUP_SUPERUSER, SUPERUSER
+from .platform_nb2 import bot, GROUP, PRIVATE, GROUP_SUPERUSER, SUPERUSER
 
 class Status:
     PRE = "pre"                     #游戏前
@@ -76,7 +76,7 @@ def build_help(title: str, items: dict, extra: str = ""):
         text += "\n" + extra
     return text
 
-@platform.on_command("whelp", aliases="帮助")
+@bot.on_command("whelp", aliases="帮助")
 async def _(session):
     await session.send(
         'GENERAL / 通用:\n'
@@ -86,7 +86,7 @@ async def _(session):
         'wpass 发言结束\n'
     )
 
-@platform.on_command("whelpsu", permission=SUPERUSER)
+@bot.on_command("whelpsu", permission=SUPERUSER)
 async def _(session):
 
     extra = (
@@ -102,7 +102,7 @@ async def _(session):
         "wday": "直接进入白天",
     }, extra))
 
-@platform.on_command("wolfhelp")
+@bot.on_command("wolfhelp")
 async def _(session):
 
     extra = (
@@ -120,7 +120,7 @@ async def _(session):
         "wgun [id]": "黑狼开枪（0为空枪）",
     }, extra))
 
-@platform.on_command("otherhelp")
+@bot.on_command("otherhelp")
 async def _(session):
 
     await session.send(build_help("OTHER ROLES / 其他职业：", {
@@ -134,7 +134,7 @@ async def _(session):
         "wcatch [id]": "摄梦人摄梦",
     }))
 
-@platform.on_friend_request()
+@bot.on_friend_request()
 async def _(session):
     await session.approve()
 
@@ -154,11 +154,11 @@ async def ban(qid:int, time = 3600):
     x = await get_by_qid(qid)
     if x == -1 or not time or not is_idiot_dead or player_list[x-1].role != 'Id':
         try:
-            await platform.set_group_ban(user_id = qid, duration = time)
+            await bot.set_group_ban(user_id = qid, duration = time)
         except:
             pass 
 
-@platform.on_command("wjoin", aliases = '加入', permission = GROUP)
+@bot.on_command("wjoin", aliases = '加入', permission = GROUP)
 async def _(session):
     global player_list
     if status != Status.PRE:
@@ -168,13 +168,13 @@ async def _(session):
         if pl.qid == session.event.user_id:
             await session.send("您已加入", at_sender = True)
             return
-    raw_info = await platform.get_group_member_info(user_id = session.event.user_id)
+    raw_info = await bot.get_group_member_info(user_id = session.event.user_id)
     raw_info = raw_info['card']
     raw_info = raw_info.split('|')[-1].strip()
     player_list.append(Player(0, session.event.user_id, '', False, False, raw_info))
     await session.send("已加入", at_sender = True)
 
-@platform.on_command("wkick", aliases = '踢', permission = GROUP_SUPERUSER)
+@bot.on_command("wkick", aliases = '踢', permission = GROUP_SUPERUSER)
 async def _(session):
     global player_list
     if status != Status.PRE:
@@ -185,7 +185,7 @@ async def _(session):
     for sub in msg:
         if sub.type == "at":
             qid = int(sub.data["qq"])
-            if qid == platform.bot_qid:
+            if qid == bot.bot_qid:
                 continue
             for pl in player_list:
                 if pl.qid == qid:
@@ -242,7 +242,7 @@ def find_next_player(cur_id:int):
                 cur_id += 1
     return cur_id
 
-@platform.on_command("wshow", aliases = '看看你的', permission = GROUP | PRIVATE)
+@bot.on_command("wshow", aliases = '看看你的', permission = GROUP | PRIVATE)
 async def _(session):
     global player_list
     if status == Status.PRE:
@@ -268,7 +268,7 @@ async def _(session):
         msg = build_player_msg()
         await session.send(msg)
 
-@platform.on_command("wset", aliases = '设置',permission = GROUP_SUPERUSER)
+@bot.on_command("wset", aliases = '设置',permission = GROUP_SUPERUSER)
 async def _(session):
     global role_list, show_id, end_target, game_log
     # print(session.current_arg_text)
@@ -310,10 +310,10 @@ async def reset():
     global player_list, status
     status = Status.END
     for pl in player_list:
-        await platform.set_group_card(user_id = pl.qid, card = pl.ori_id)
-    ls = await platform.get_group_member_list()
+        await bot.set_group_card(user_id = pl.qid, card = pl.ori_id)
+    ls = await bot.get_group_member_list()
     for i in ls:
-        if i['user_id'] == platform.bot_qid:
+        if i['user_id'] == bot.bot_qid:
             continue
         await ban(qid = i['user_id'], time = 0)
     logger = []
@@ -322,46 +322,46 @@ async def reset():
                 "type": "node",
                 "data": {
                     "name": "bot",
-                    "uin": str(platform.bot_qid),
+                    "uin": str(bot.bot_qid),
                     "content": i
                 }
             })
-    await platform.send_group_forward_msg(messages = logger)
+    await bot.send_group_forward_msg(messages = logger)
     player_list.clear()
     status = Status.PRE     
 
-@platform.on_command("wstop", aliases = '停止',permission = SUPERUSER)
+@bot.on_command("wstop", aliases = '停止',permission = SUPERUSER)
 async def _(session):
-    await platform.send_group_msg("游戏已终止！")
+    await bot.send_group_msg("游戏已终止！")
     await reset()
 
-@platform.on_command("wnotice",permission = SUPERUSER)
+@bot.on_command("wnotice",permission = SUPERUSER)
 async def _(session):
     global status
     if status == Status.DAY_VOT or status == Status.DAY_VOT_UP:
         for i in range(1,len(player_list)+1):
             if vote_for[i] == -1:
-                await platform.send_private_msg(user_id = player_list[i-1].qid, message = '您还未投票')
+                await bot.send_private_msg(user_id = player_list[i-1].qid, message = '您还未投票')
     elif status == Status.EVE:
         unoped = []
         for i in player_list:
             if not i.dead and not i.is_op and not i.role in NOT_OP and not(i.id in wolf_team and i.id != wolf_team[0]):
                 unoped.append(i)
         for i in unoped:
-            await platform.send_private_msg(user_id = i.qid, message = '您还未操作')        
+            await bot.send_private_msg(user_id = i.qid, message = '您还未操作')        
 
-@platform.on_command("www",permission = SUPERUSER)
+@bot.on_command("www",permission = SUPERUSER)
 async def _(session):
-    qid_list = await platform.get_group_member_list()
+    qid_list = await bot.get_group_member_list()
     for i in qid_list:
-        if i['user_id'] == platform.bot_qid:
+        if i['user_id'] == bot.bot_qid:
             continue
         await ban(qid = i['user_id'], time = 0)
 
-@platform.on_command("wstart", aliases = '启动', permission = GROUP_SUPERUSER)
+@bot.on_command("wstart", aliases = '启动', permission = GROUP_SUPERUSER)
 async def _(session):
     global player_list, status, day_cnt, is_idiot_dead, KnOp, game_log, ESOp, GunOp
-    if session.event.group_id != platform.group_id:
+    if session.event.group_id != bot.group_id:
         return
     if status != Status.PRE:
         await session.send("游戏已开始")
@@ -390,8 +390,8 @@ async def _(session):
         player_list[i].id = i+1
         player_list[i].role = role_list[i]
         msg += f'{i+1} | {player_list[i].ori_id}\n'
-        await platform.set_group_card(user_id = player_list[i].qid, card = f'{i+1} | {player_list[i].ori_id}')
-        await platform.send_private_msg(user_id = player_list[i].qid, message = f"您的编号是 {player_list[i].id}，您的身份是{ROLE_DICT[role_list[i]]}")
+        await bot.set_group_card(user_id = player_list[i].qid, card = f'{i+1} | {player_list[i].ori_id}')
+        await bot.send_private_msg(user_id = player_list[i].qid, message = f"您的编号是 {player_list[i].id}，您的身份是{ROLE_DICT[role_list[i]]}")
     await session.send(msg)
     wolf_team.clear()
     for pl in player_list:
@@ -403,40 +403,40 @@ async def _(session):
     await night_move()
 
 async def good_win():
-    await platform.send_group_msg(message = '好人胜利！')
-    await platform.send_group_msg(message = build_observe_msg())
+    await bot.send_group_msg(message = '好人胜利！')
+    await bot.send_group_msg(message = build_observe_msg())
     await reset()
 
 async def wolf_win():
-    await platform.send_group_msg(message = '狼人胜利！')
-    await platform.send_group_msg(message = build_observe_msg())
+    await bot.send_group_msg(message = '狼人胜利！')
+    await bot.send_group_msg(message = build_observe_msg())
     await reset()
 
 async def night_move():
     global status, player_list, WolfOp, WitchOp, GuardOp, lstGO, PredOp, day_cnt, game_log, bear_roar, lstDC, DCOp
-    ls = await platform.get_group_member_list()
+    ls = await bot.get_group_member_list()
     for i in ls:
-        if i['user_id'] == platform.bot_qid:
+        if i['user_id'] == bot.bot_qid:
             continue
         await ban(qid = i['user_id'])
     day_cnt += 1
     game_log.append(build_observe_msg())
-    await platform.send_group_msg(message = build_player_msg())
+    await bot.send_group_msg(message = build_player_msg())
     for i in range(len(player_list)):
         player_list[i].is_op = False
     lstGO = GuardOp 
     lstDC = DCOp
     WolfOp = WitchOp = GuardOp = PredOp = DCOp = 0
     status = Status.EVE
-    await platform.send_group_msg(message = "天黑请闭眼")
+    await bot.send_group_msg(message = "天黑请闭眼")
     game_log.append(f"第 {day_cnt-1} 夜：")
     msg = '你的队友：\n'
     for i in wolf_team:
         pl = player_list[i-1]
         msg = msg + str(pl.id) + ' ' + ROLE_DICT[pl.role] + '\n'
     for i in wolf_team:
-        await platform.send_private_msg(user_id = player_list[i-1].qid, message = msg)
-    await platform.send_private_msg(user_id = player_list[wolf_team[0]-1].qid, message = '您是主狼')
+        await bot.send_private_msg(user_id = player_list[i-1].qid, message = msg)
+    await bot.send_private_msg(user_id = player_list[wolf_team[0]-1].qid, message = '您是主狼')
     bear_roar = -1
     for i in player_list:
         if i.role == 'Be':
@@ -503,10 +503,10 @@ async def die(id, can_op = True, from_gun = 0, queue = False):
             gun_queue.append(id)
             return
         msg = build_player_msg()
-        await platform.send_private_msg(user_id = player_list[id-1].qid, message = msg)
+        await bot.send_private_msg(user_id = player_list[id-1].qid, message = msg)
         if from_gun:
-            await platform.send_private_msg(user_id = player_list[id-1].qid, message = f"{from_gun} 枪了您")
-        await platform.send_private_msg(user_id = player_list[id-1].qid, message = "您已死 是否用枪\n 回 wgun [id] 枪人，id=0 表示空枪")
+            await bot.send_private_msg(user_id = player_list[id-1].qid, message = f"{from_gun} 枪了您")
+        await bot.send_private_msg(user_id = player_list[id-1].qid, message = "您已死 是否用枪\n 回 wgun [id] 枪人，id=0 表示空枪")
         guned_list.append(id)
 
 async def day_move():
@@ -560,10 +560,10 @@ async def day_move():
     if PredOp > 0:
         PredId = await get_by_role('Pr')
         if player_list[PredOp-1].role in WOLF:
-            await platform.send_private_msg(user_id = player_list[PredId-1].qid, message = f'{PredOp} 号身份为坏')
+            await bot.send_private_msg(user_id = player_list[PredId-1].qid, message = f'{PredOp} 号身份为坏')
             game_log.append(f"{PredOp} 被查杀")
         else: 
-            await platform.send_private_msg(user_id = player_list[PredId-1].qid, message = f'{PredOp} 号身份为好')
+            await bot.send_private_msg(user_id = player_list[PredId-1].qid, message = f'{PredOp} 号身份为好')
             game_log.append(f"{PredOp} 是金水")
         if player_list[PredOp-1].role == 'ES' and not ESOp:
             ESOp = 1
@@ -604,8 +604,8 @@ async def day_move():
         return
     for i in gun_queue:
         msg = build_player_msg()
-        await platform.send_private_msg(user_id = player_list[i-1].qid, message = msg)
-        await platform.send_private_msg(user_id = player_list[i-1].qid, message = "您已死 是否用枪\n 回 wgun [id] 枪人，id=0 表示空枪")
+        await bot.send_private_msg(user_id = player_list[i-1].qid, message = msg)
+        await bot.send_private_msg(user_id = player_list[i-1].qid, message = "您已死 是否用枪\n 回 wgun [id] 枪人，id=0 表示空枪")
         guned_list.append(i)
     gun_queue.clear()
     await asyncio.sleep(10)
@@ -618,13 +618,13 @@ async def last_word():
         status = Status.DAY_LW
         if bear_roar != -1:
             if bear_roar:
-                await platform.send_group_msg(message = '熊咆哮了')
+                await bot.send_group_msg(message = '熊咆哮了')
                 game_log.append("熊咆哮了")
             else:
-                await platform.send_group_msg(message = '熊没有咆哮')
+                await bot.send_group_msg(message = '熊没有咆哮')
                 game_log.append("熊没有咆哮")
         if not die_list:
-            await platform.send_group_msg(message = '昨晚是平安夜')
+            await bot.send_group_msg(message = '昨晚是平安夜')
             game_log.append("昨晚为平安夜")
             dis_start = random.randint(0,len(player_list)-1)
             is_rev = random.randint(0,1)
@@ -642,18 +642,18 @@ async def last_word():
             is_rev = random.randint(0,1)
             dis_start = find_next_player(x)
             msg = build_player_msg()
-            await platform.send_group_msg(message = msg)
+            await bot.send_group_msg(message = msg)
             game_log.append(msg)
             game_log.append(' '.join(map(str,die_list)) + '死了')
             if GunOp:
-                await platform.send_group_msg(message = GunOp)
+                await bot.send_group_msg(message = GunOp)
             GunOp = ""
             if day_cnt == 1:
-                await platform.send_group_msg(message = ' '.join(map(str,die_list)) + '死了，按照给定的顺序发遗言，发完言记得 wpass')
+                await bot.send_group_msg(message = ' '.join(map(str,die_list)) + '死了，按照给定的顺序发遗言，发完言记得 wpass')
                 await ban(qid = player_list[die_list[0]-1].qid, time = 0)
-                await platform.send_group_msg(message = MessageSegment.at(player_list[die_list[0]-1].qid) + '请发遗言。')
+                await bot.send_group_msg(message = MessageSegment.at(player_list[die_list[0]-1].qid) + '请发遗言。')
             else:
-                await platform.send_group_msg(message = ' '.join(map(str,die_list)) + '死了，非首夜夜晚死的没有遗言。')
+                await bot.send_group_msg(message = ' '.join(map(str,die_list)) + '死了，非首夜夜晚死的没有遗言。')
                 die_list.clear()
                 await discuss()
         return
@@ -662,9 +662,9 @@ async def last_word():
         die_list.sort()
         random.shuffle(die_list)
         msg = build_player_msg()
-        await platform.send_group_msg(message = msg)
-        await platform.send_group_msg(message = ' '.join(map(str,die_list)) + '死了，按照给定的顺序发遗言。')
-        await platform.send_group_msg(message = MessageSegment.at(player_list[die_list[0]-1].qid) + '请发遗言。')
+        await bot.send_group_msg(message = msg)
+        await bot.send_group_msg(message = ' '.join(map(str,die_list)) + '死了，按照给定的顺序发遗言。')
+        await bot.send_group_msg(message = MessageSegment.at(player_list[die_list[0]-1].qid) + '请发遗言。')
         game_log.append(' '.join(map(str,die_list)) + "死了")
         await ban(qid = player_list[die_list[0]-1].qid, time = 0)
 
@@ -673,20 +673,20 @@ async def discuss():
     status = Status.DAY_DIS
     cur_id = dis_start
     game_log.append(f"第 {day_cnt} 天")
-    await platform.send_group_msg(message = '进入白天发言阶段')
+    await bot.send_group_msg(message = '进入白天发言阶段')
     if is_idiot_dead:
         for i in player_list:
             if i.role == 'Id' and not i.dead:
-                await platform.send_group_msg(message = f'{i.id} 号白痴翻牌，可以在讨论阶段插麦。')
+                await bot.send_group_msg(message = f'{i.id} 号白痴翻牌，可以在讨论阶段插麦。')
                 await ban(qid = i.qid, time = 0)
     order = "递增" if is_rev == 0 else "递减"
-    await platform.send_group_msg(message = f"从 {MessageSegment.at(player_list[dis_start-1].qid)} 开始发言，顺序为{order}")
+    await bot.send_group_msg(message = f"从 {MessageSegment.at(player_list[dis_start-1].qid)} 开始发言，顺序为{order}")
     await ban(qid = player_list[dis_start-1].qid, time = 0)
 
-@platform.on_command('wday',aliases = '直接白天', permission = SUPERUSER)
+@bot.on_command('wday',aliases = '直接白天', permission = SUPERUSER)
 async def _(session):
     global status, player_list
-    if session.event.group_id != platform.group_id:
+    if session.event.group_id != bot.group_id:
         return
     if status != Status.EVE:
         await session.send("已经白天或游戏尚未开始")
@@ -695,7 +695,7 @@ async def _(session):
     await session.send("设置直接白天成功")
     await day_move()
 
-@platform.on_command('wsay',aliases = '说', permission=PRIVATE)
+@bot.on_command('wsay',aliases = '说', permission=PRIVATE)
 async def _(session):
     global wolf_team
     q = 0
@@ -713,9 +713,9 @@ async def _(session):
         return
     for i in wolf_team:
         if q != i:
-            await platform.send_private_msg(user_id = player_list[i-1].qid, message = f"{q} 号说：{session.current_arg_text}") 
+            await bot.send_private_msg(user_id = player_list[i-1].qid, message = f"{q} 号说：{session.current_arg_text}") 
 
-@platform.on_command('wconf',aliases = '确认', permission=PRIVATE)
+@bot.on_command('wconf',aliases = '确认', permission=PRIVATE)
 async def _(session):
     global player_list
     if status != Status.EVE:
@@ -731,14 +731,14 @@ async def _(session):
         id = await get_by_role('Wi')
         for i in wolf_team:
             if not i == wolf_team[0]:
-                await platform.send_private_msg(user_id = player_list[i-1].qid,message = f"操作已确认")
+                await bot.send_private_msg(user_id = player_list[i-1].qid,message = f"操作已确认")
         if id == 0 or player_list[id-1].dead or SavePot == 1:
             pass
         else:
             if WolfOp == 0:
-                await platform.send_private_msg(user_id = player_list[id-1].qid, message = "狼队空刀")
+                await bot.send_private_msg(user_id = player_list[id-1].qid, message = "狼队空刀")
             else:
-                await platform.send_private_msg(user_id = player_list[id-1].qid, message = f"刀口是 {WolfOp}")
+                await bot.send_private_msg(user_id = player_list[id-1].qid, message = f"刀口是 {WolfOp}")
     NotOp = []
     for i in player_list:
         if not i.dead and not i.is_op and not i.role in NOT_OP and not(i.id in wolf_team and i.id != wolf_team[0]):
@@ -746,7 +746,7 @@ async def _(session):
     if len(NotOp) == 0:
         await day_move()
 
-@platform.on_command('wpred', aliases = ['预言','预'],permission=PRIVATE)
+@bot.on_command('wpred', aliases = ['预言','预'],permission=PRIVATE)
 async def _(session):
     global PredOp
     if status != Status.EVE:
@@ -767,7 +767,7 @@ async def _(session):
     PredOp = to
     await session.send(f'您将预知 {to} 的身份')
 
-@platform.on_command('wsave',aliases = '救', permission=PRIVATE)
+@bot.on_command('wsave',aliases = '救', permission=PRIVATE)
 async def _(session):
     global WitchOp
     if status != Status.EVE:
@@ -782,7 +782,7 @@ async def _(session):
     await session.send("您将救下刀口")
     WitchOp = 1
 
-@platform.on_command('wkill', aliases = ['刀','杀'], permission=PRIVATE)
+@bot.on_command('wkill', aliases = ['刀','杀'], permission=PRIVATE)
 async def _(session):
     global WolfOp
     if status != Status.EVE:
@@ -802,9 +802,9 @@ async def _(session):
         return
     WolfOp = to
     for i in wolf_team:
-        await platform.send_private_msg(user_id = player_list[i-1].qid,message = f"狼队将刀 {to} 号")
+        await bot.send_private_msg(user_id = player_list[i-1].qid,message = f"狼队将刀 {to} 号")
 
-@platform.on_command('wpois', aliases = '毒', permission=PRIVATE)
+@bot.on_command('wpois', aliases = '毒', permission=PRIVATE)
 async def _(session):
     global WitchOp
     if status != Status.EVE:
@@ -822,7 +822,7 @@ async def _(session):
     WitchOp = -to
     await session.send(f"您将毒 {to} 号")
 
-@platform.on_command('wguard', aliases = ['守','守卫'],permission=PRIVATE)
+@bot.on_command('wguard', aliases = ['守','守卫'],permission=PRIVATE)
 async def _(session):
     global GuardOp
     if status != Status.EVE:
@@ -843,7 +843,7 @@ async def _(session):
     GuardOp = to
     await session.send(f"您将守卫 {to} 号")
 
-@platform.on_command('wcatch', aliases = ['摄','摄梦'],permission=PRIVATE)
+@bot.on_command('wcatch', aliases = ['摄','摄梦'],permission=PRIVATE)
 async def _(session):
     global DCOp
     if status != Status.EVE:
@@ -864,7 +864,7 @@ async def _(session):
     DCOp = to
     await session.send(f"您将摄梦 {to} 号")
 
-@platform.on_command('wgun',aliases = '枪',permission = PRIVATE)
+@bot.on_command('wgun',aliases = '枪',permission = PRIVATE)
 async def _(session):
     global guned_list, player_list, die_list, game_log, GunOp
     if status != Status.DAY_PRE and status != Status.VOT_END and status != Status.CUT:
@@ -901,16 +901,16 @@ async def _(session):
         return
     if len(guned_list) == 0:
         if status == Status.CUT:
-            await platform.send_group_msg(message = "最终死亡："+','.join(map(str,die_list)))
+            await bot.send_group_msg(message = "最终死亡："+','.join(map(str,die_list)))
             die_list = []
             await night_move()
         else:
             await last_word()
 
-@platform.on_command('wpass',aliases = ['过','锅','发起语音通话','润','没吃吃'], permission = GROUP)
+@bot.on_command('wpass',aliases = ['过','锅','发起语音通话','润','没吃吃'], permission = GROUP)
 async def _(session):
     global die_list, pk_list, cur_id
-    if session.event.group_id != platform.group_id:
+    if session.event.group_id != bot.group_id:
         return
     x = await get_by_qid(session.event.user_id)
     if x == -1:
@@ -946,7 +946,7 @@ async def _(session):
         die_list.pop(0)
         await ban(qid = session.event.user_id)
         if not die_list:
-            await platform.send_group_msg(message = '遗言结束，进入黑夜')
+            await bot.send_group_msg(message = '遗言结束，进入黑夜')
             await night_move()
             return
         await session.send(('请 ' + MessageSegment.at(player_list[die_list[0]-1].qid) + '发表遗言'))
@@ -959,10 +959,10 @@ async def _(session):
         await ban(qid = session.event.user_id)
         if not pk_list:
             if can_vote_cnt == 0:
-                await platform.send_group_msg(message = '无人擂下投票，进入黑夜')
+                await bot.send_group_msg(message = '无人擂下投票，进入黑夜')
                 await night_move()
             else:
-                await platform.send_group_msg(message = '上擂发言结束，开始投票')
+                await bot.send_group_msg(message = '上擂发言结束，开始投票')
                 await day_vote()
             return
         await session.send(('请 ' + MessageSegment.at(player_list[pk_list[0]-1].qid) + '发言'))
@@ -987,9 +987,9 @@ async def day_vote():
                 vote_for.append(-1)
             else:
                 vote_for.append(-2)
-    await platform.send_group_msg(message = '进入投票阶段，私信 wvote [id] 投票。id=0 视为弃票。')
+    await bot.send_group_msg(message = '进入投票阶段，私信 wvote [id] 投票。id=0 视为弃票。')
 
-@platform.on_command('wcut', aliases = ['爆','自爆'],permission = PRIVATE)
+@bot.on_command('wcut', aliases = ['爆','自爆'],permission = PRIVATE)
 async def _(session):
     global player_list, status, cur_id, KnOp
     id = await get_by_qid(session.event.user_id)
@@ -1005,12 +1005,12 @@ async def _(session):
         return
     xx = session.current_arg_text.strip()
     if not(status == Status.DAY_DIS or status == Status.DAY_VOT_END):
-        await platform.send_private_msg(user_id = session.event.user_id, message = '现在不能 wcut！')
+        await bot.send_private_msg(user_id = session.event.user_id, message = '现在不能 wcut！')
         return
     if player_list[id-1].role == 'Kn' and status == Status.DAY_VOT_END:
         await session.send("")
     if (not xx or player_list[id-1].role != 'WW') and player_list[id-1].role != 'Kn':
-        await platform.send_group_msg(message = f'狼队 {id} 号自爆，白天阶段终止')
+        await bot.send_group_msg(message = f'狼队 {id} 号自爆，白天阶段终止')
         game_log.append(f'狼队 {id} 号自爆，白天阶段终止')
         await die(id)
         if status == Status.DAY_DIS:
@@ -1022,16 +1022,16 @@ async def _(session):
     elif xx.isdigit():
         x = int(xx)
         if x < 0 or x > len(player_list) or x == id or player_list[x-1].dead:
-            await platform.send_private_msg(user_id = session.event.user_id, message = 'id 参数不合法！')
+            await bot.send_private_msg(user_id = session.event.user_id, message = 'id 参数不合法！')
             return
         if player_list[id-1].role == 'Kn':
             if x == 0 or player_list[x-1].dead:
                 await session.send('id 参数不合法！')
                 return
             else:
-                await platform.send_group_msg(message = f'！！骑士 {id} 与 {x} 进行决斗！！')
+                await bot.send_group_msg(message = f'！！骑士 {id} 与 {x} 进行决斗！！')
                 if x in wolf_team:
-                    await platform.send_group_msg(message = f'决斗成功，{x} 号死亡，白天终止')
+                    await bot.send_group_msg(message = f'决斗成功，{x} 号死亡，白天终止')
                     game_log.append(f'骑士 {id} 与 {x} 进行决斗，决斗成功，{x} 号死亡，白天终止')
                     KnOp = 1
                     if status == Status.DAY_DIS:
@@ -1048,7 +1048,7 @@ async def _(session):
                         return
                     status = Status.CUT
                 else:
-                    await platform.send_group_msg(message = f'骑士死亡，发言继续')
+                    await bot.send_group_msg(message = f'骑士死亡，发言继续')
                     game_log.append(f'骑士 {id} 与 {x} 进行决斗，骑士死亡')
                     await die(id)
                     if not status.startswith(Status.DAY):
@@ -1068,17 +1068,17 @@ async def _(session):
                         await ban(qid = session.event.user_id)
                         if not pk_list:
                             if can_vote_cnt == 0:
-                                await platform.send_group_msg(message = '无人擂下投票，进入黑夜')
+                                await bot.send_group_msg(message = '无人擂下投票，进入黑夜')
                                 await night_move()
                             else:
-                                await platform.send_group_msg(message = '上擂发言结束，开始投票')
+                                await bot.send_group_msg(message = '上擂发言结束，开始投票')
                                 await day_vote()
                             return
                         await session.send(('请 ' + MessageSegment.at(player_list[pk_list[0]-1].qid) + '发言'))
                         await ban(qid = player_list[pk_list[0]-1].qid, time = 0)
             return
         if x == 0 or player_list[x-1].dead:
-            await platform.send_group_msg(message = f'狼队 {id} 号自爆，白天阶段终止')
+            await bot.send_group_msg(message = f'狼队 {id} 号自爆，白天阶段终止')
             game_log.append(f'狼队 {id} 号自爆，白天阶段终止')
             if status == Status.DAY_DIS:
                 await ban(qid = player_list[cur_id-1].qid)
@@ -1088,7 +1088,7 @@ async def _(session):
             if status.startswith(Status.DAY):
                 await night_move()
         else:
-            await platform.send_group_msg(message = f'白狼 {id} 号自爆带走 {x}，白天阶段终止')
+            await bot.send_group_msg(message = f'白狼 {id} 号自爆带走 {x}，白天阶段终止')
             game_log.append(f'白狼 {id} 号自爆带走 {x}，白天阶段终止')
             if status == Status.DAY_DIS:
                 await ban(qid = player_list[cur_id-1].qid)
@@ -1108,7 +1108,7 @@ async def _(session):
                     return
                 status = Status.CUT
 
-@platform.on_command('wvote', aliases = ['投','票','投票'],permission = PRIVATE)
+@bot.on_command('wvote', aliases = ['投','票','投票'],permission = PRIVATE)
 async def _(session):
     global vote_for, vote_list, can_vote_cnt
     id = await get_by_qid(session.event.user_id)
@@ -1172,7 +1172,7 @@ async def vote_end():
     else:
         msg += '最多票得者为：' + ','.join(map(str,voteto))
     if mxcnt == 0:
-        await platform.send_group_msg(message = msg)
+        await bot.send_group_msg(message = msg)
         await night_move()
         return
     game_log.append(msg)
@@ -1180,15 +1180,15 @@ async def vote_end():
         if status != Status.DAY_VOT and status != Status.DAY_VOT_UP:
             return
         status = Status.VOT_END
-        await platform.send_group_msg(message = msg)
-        await platform.send_group_msg(message = f'{voteto[0]} 号被票出')
+        await bot.send_group_msg(message = msg)
+        await bot.send_group_msg(message = f'{voteto[0]} 号被票出')
         game_log.append(f'{voteto[0]} 号被票出')
         if player_list[voteto[0]-1].role == 'Id':
-            await platform.send_group_msg(message = f'{voteto[0]} 号翻牌是白痴，取消放逐')
+            await bot.send_group_msg(message = f'{voteto[0]} 号翻牌是白痴，取消放逐')
             game_log.append(f'{voteto[0]} 号翻牌是白痴，取消放逐')
             is_idiot_dead = True
             die_list.append(voteto[0])
-            await platform.send_group_msg(message = f"请 {voteto[0]} 发表遗言")
+            await bot.send_group_msg(message = f"请 {voteto[0]} 发表遗言")
             return
         die_list = []
         await die(voteto[0])
@@ -1196,14 +1196,14 @@ async def vote_end():
             await last_word()
         return
     if status == Status.DAY_VOT_UP:
-        await platform.send_group_msg(message = msg)
-        await platform.send_group_msg(message = '上擂平票，投票结束，进入黑夜')
+        await bot.send_group_msg(message = msg)
+        await bot.send_group_msg(message = '上擂平票，投票结束，进入黑夜')
         game_log.append('上擂平票，投票结束，进入黑夜')
         await night_move()
     else:
         pk_list = voteto
         status = Status.DAY_VOT_END
-        await platform.send_group_msg(message = msg)
+        await bot.send_group_msg(message = msg)
         vote_list = {}
         vote_for = [0]
         can_vote_cnt = 0
@@ -1215,7 +1215,7 @@ async def vote_end():
             else:
                 vote_for.append(-1)
                 can_vote_cnt += 1
-        await platform.send_group_msg(message = ','.join(map(str,voteto)) + '上擂，请按此顺序发言')
-        await platform.send_group_msg(message = MessageSegment.at(player_list[voteto[0]-1].qid) + '请发言。')
+        await bot.send_group_msg(message = ','.join(map(str,voteto)) + '上擂，请按此顺序发言')
+        await bot.send_group_msg(message = MessageSegment.at(player_list[voteto[0]-1].qid) + '请发言。')
         game_log.append(','.join(map(str,voteto)) + '上擂')
         await ban(qid = player_list[voteto[0]-1].qid, time = 0)
