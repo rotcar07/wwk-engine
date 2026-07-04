@@ -1,0 +1,22 @@
+{
+    "八神": {
+        "roles": "WWBWESWiPrIdHuGu",
+        "open": true,
+        "camp": "神"
+    },
+    "八神2": {
+        "roles": "WWBWESWiPrIdHuDC",
+        "open": true,
+        "camp": "神"
+    },
+    "七人": {
+        "roles": "PrWiHuGuViWoWW",
+        "open": false,
+        "camp": "民"
+    },
+    "九人": {
+        "roles": "PrWiHuGuIdKnWWBWES",
+        "open": false,
+        "camp": "城"
+    }
+}

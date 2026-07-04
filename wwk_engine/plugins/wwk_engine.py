@@ -1,6 +1,10 @@
 import asyncio
 import random
 import numpy
+from pathlib import Path
+import json
+
+BASE_DIR = Path(__file__).parent
 
 from dataclasses import dataclass
 from .platform import bot, GROUP, PRIVATE, GROUP_SUPERUSER, SUPERUSER
@@ -11,7 +15,7 @@ class Status:
     PRE = "pre"                     #游戏前
     EVE = "eve"                     #夜晚
     DAY_PRE = "day-pre"             #在 eve 和 day-yy 之间过渡
-    DAY_LW = "day-yy"               #白天开始结算后的遗言
+    DAY_LW = "day-lw"               #白天开始结算后的遗言
     DAY_DIS = "day-dis"             #白天的讨论
     DAY = "day"                     #直接白天时的指示
     DAY_VOT = "day-vot"             #初次投票
@@ -49,6 +53,9 @@ vote_list = {}
 vote_for = []
 can_vote_cnt = 0
 is_idiot_dead = False
+
+with (BASE_DIR / "modes.json").open(encoding="utf-8") as f:
+    MODES = json.load(f)
 
 ROLE_DICT = {
     "WW": "白狼",
@@ -190,14 +197,14 @@ async def _(session):
     x = session.current_arg_text.split()
     if not x:
         return
-    if x[0] == '八神':
-        x = ["WWBWESWiPrIdHuGu",'1','神']
-    elif x[0] == '八神2':
-        x = ['WWBWESWiPrIdHuDC','1','神']
-    elif '七人' in x[0]:
-        x = ['PrWiHuGuViWoWW','0','民']
-    elif '九人' in x[0]:
-        x = ['PrWiHuGuIdKnWWBWES','0','城']
+    for prefix, config in MODES.items():
+        if x[0].startswith(prefix):
+            x = [
+                config["roles"],
+                "1" if config["open"] else "0",
+                config["camp"]
+            ]
+            break
     if len(x) <= 2 or len(x[0]) % 2 == 1 or not x[1].isdigit() or int(x[1]) < 0 or int(x[1]) > 1 or not x[2] in ['边','城','民','神']:
         await session.send("wset 不合法")
         return
