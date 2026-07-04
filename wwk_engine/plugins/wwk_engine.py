@@ -1,7 +1,3 @@
-#########
-# wwk.py v2.0
-# Transform into Nonebot2.
-########
 import asyncio
 import random
 import numpy
