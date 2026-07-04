@@ -1,4 +1,4 @@
-from .platform_nb2 import bot, SUPERUSER
+from .platform import bot, SUPERUSER
 
 def build_help(title: str, items: dict, extra: str = ""):
     text = f"{title}\n"

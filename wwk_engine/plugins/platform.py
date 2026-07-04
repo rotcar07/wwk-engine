@@ -1,14 +1,11 @@
-import nonebot
 from collections.abc import Collection
-from nonebot import init, get_bot, on_command, on_type
+from nonebot import get_bot, on_command, on_type, get_driver
 from nonebot.permission import SUPERUSER, Permission
 from nonebot.adapters.onebot.v11 import (
     Bot,
     Event,
     FriendRequestEvent,
     GroupMessageEvent,
-    GroupRequestEvent,
-    MessageSegment,
     PrivateMessageEvent,
     MessageEvent,
 )
@@ -91,7 +88,7 @@ class NoneBotPlatform:
             return func
         return decorator
 
-config = nonebot.get_driver().config
+config = get_driver().config
 bot = NoneBotPlatform(group_id=config.groupid, bot_qid=config.botqid)
 
 async def is_group(event: Event) -> bool:

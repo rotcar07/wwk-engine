@@ -3,7 +3,7 @@ import random
 import numpy
 
 from dataclasses import dataclass
-from .platform_nb2 import bot, GROUP, PRIVATE, GROUP_SUPERUSER, SUPERUSER
+from .platform import bot, GROUP, PRIVATE, GROUP_SUPERUSER, SUPERUSER
 from .logger import GameLog
 from nonebot.adapters.onebot.v11 import MessageSegment
 
