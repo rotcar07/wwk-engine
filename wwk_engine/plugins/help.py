@@ -1,4 +1,4 @@
-from .platform_nb2 import bot
+from .platform_nb2 import bot, SUPERUSER
 
 def build_help(title: str, items: dict, extra: str = ""):
     text = f"{title}\n"
@@ -8,7 +8,7 @@ def build_help(title: str, items: dict, extra: str = ""):
         text += "\n" + extra
     return text
 
-@bot.on_command("whelp", aliases="帮助")
+@bot.on_command("whelp", aliases = "帮助")
 async def _(session):
     await session.send(
         'GENERAL / 通用:\n'
@@ -18,7 +18,7 @@ async def _(session):
         'wpass 发言结束\n'
     )
 
-@bot.on_command("whelpsu", permission=SUPERUSER)
+@bot.on_command("whelpsu", permission = SUPERUSER)
 async def _(session):
 
     extra = (

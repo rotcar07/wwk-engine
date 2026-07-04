@@ -2,10 +2,10 @@ import asyncio
 import random
 import numpy
 
-from collections import namedtuple
 from dataclasses import dataclass
-from collections.abc import Collection
 from .platform_nb2 import bot, GROUP, PRIVATE, GROUP_SUPERUSER, SUPERUSER
+from .logger import GameLog
+from nonebot.adapters.onebot.v11 import MessageSegment
 
 class Status:
     PRE = "pre"                     #游戏前
@@ -35,7 +35,7 @@ status = Status.PRE
 show_id = False
 role_list = []
 end_target = 0
-game_log = []
+game_log = GameLog()
 wolf_team = []
 SavePot = PoitPot = ESOp = WolfOp = WitchOp = lstGO = lstDC = GuardOp = PredOp = DCOp = KnOp = day_cnt = 0
 GunOp = ""
@@ -232,7 +232,7 @@ async def _(session):
     else:
         msg += '死后不公开身份'
     msg += ' 屠' + end_target
-    game_log = [msg]
+    game_log.__init__(msg)
     await session.send("wset 成功\n" + msg)
 
 async def reset():
@@ -245,17 +245,7 @@ async def reset():
         if i['user_id'] == bot.bot_qid:
             continue
         await ban(qid = i['user_id'], time = 0)
-    logger = []
-    for i in game_log:
-        logger.append({
-                "type": "node",
-                "data": {
-                    "name": "bot",
-                    "uin": str(bot.bot_qid),
-                    "content": i
-                }
-            })
-    await bot.send_group_forward_msg(messages = logger)
+    game_log.__init__()
     player_list.clear()
     status = Status.PRE     
 
@@ -983,7 +973,7 @@ async def _(session):
                     if not status.startswith(Status.DAY):
                         return
                     if status == Status.DAY_DIS and cur_id == id:
-                        xx = await find_next_player(cur_id)
+                        xx = find_next_player(cur_id)
                         await ban(qid = session.event.user_id)
                         if xx == dis_start:
                             await day_vote()

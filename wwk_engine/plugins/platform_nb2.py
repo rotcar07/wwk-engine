@@ -1,4 +1,5 @@
 import nonebot
+from collections.abc import Collection
 from nonebot import init, get_bot, on_command, on_type
 from nonebot.permission import SUPERUSER, Permission
 from nonebot.adapters.onebot.v11 import (
@@ -43,9 +44,9 @@ class NoneBotPlatform:
     @property
     def bot(self):
         return get_bot()
-    async def send_group_msg(self, message:str):
+    async def send_group_msg(self, message):
         await self.bot.send_group_msg(group_id = self.group_id, message = message)
-    async def send_private_msg(self, user_id:int, message:str):
+    async def send_private_msg(self, user_id:int, message):
         await self.bot.send_private_msg(user_id = user_id, message = message)
     async def set_group_card(self, user_id:int, card:str):
         await self.bot.set_group_card(group_id = self.group_id, user_id = user_id, card = card)
@@ -94,11 +95,11 @@ config = nonebot.get_driver().config
 bot = NoneBotPlatform(group_id=config.groupid, bot_qid=config.botqid)
 
 async def is_group(event: Event) -> bool:
-    return isinstance(event, GroupMessageEvent) and event.group_id == platform.group_id
+    return isinstance(event, GroupMessageEvent) and event.group_id == bot.group_id
 async def is_private(event: Event) -> bool:
     return isinstance(event, PrivateMessageEvent)
 async def group_and_superuser(event: Event) -> bool:
-    return await is_group(event) and str(event.user_id) in config.superusers
+    return await is_group(event) and event.get_user_id() in config.superusers
 
 GROUP_SUPERUSER = Permission(group_and_superuser)
 GROUP = Permission(is_group)
