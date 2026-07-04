@@ -1,0 +1,26 @@
+{
+  "editor.inlineSuggest.enabled": true,
+  "chat.agent.enabled": true,
+  "github.copilot.inlineSuggest.enable": true,
+
+  "editor.suggest.showInlineSuggestions": true,
+
+  "editor.quickSuggestions": {
+    "other": true,
+    "comments": true,
+    "strings": true
+  },
+
+  "editor.suggestOnTriggerCharacters": true,
+
+  "editor.wordBasedSuggestions": "allDocuments",
+
+  "[python]": {
+    "editor.inlineSuggest.enabled": true,
+    "editor.quickSuggestions": {
+      "comments": "on",
+      "strings": "on",
+      "other": "on"
+    }
+  }
+}
