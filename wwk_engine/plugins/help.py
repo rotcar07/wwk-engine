@@ -16,6 +16,8 @@ async def _(session):
         'wshow 展示现在状态\n'
         'wvote [id] 投票\n'
         'wpass 发言结束\n'
+        'wolfhelp 狼队操作帮助\n'
+        'otherhelp 其他职业操作帮助\n'
     )
 
 @bot.on_command("whelpsu", permission = SUPERUSER)
